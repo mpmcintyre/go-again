@@ -108,7 +108,7 @@ func New(cb func(), wsport int, logs_enabled bool) (*Reloader, error) {
 	r := &Reloader{
 		watcher:        watcher,
 		logs_enabled:   logs_enabled,
-		ws_connections: make([]*websocket.Conn, 1),
+		ws_connections: make([]*websocket.Conn, 0),
 	}
 	if err != nil {
 		return r, err
