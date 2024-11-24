@@ -99,17 +99,17 @@ func (rel *Reloader) wshome(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func New(cb func(), wsport int, logs_enabled bool) Reloader {
+func New(cb func(), wsport int, logs_enabled bool) (Reloader, error) {
 
 	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	r := Reloader{
 		watcher:        watcher,
 		logs_enabled:   logs_enabled,
 		ws_connections: make([]*websocket.Conn, 1),
+	}
+	if err != nil {
+		return r, err
 	}
 
 	// Start listening for events.
@@ -142,5 +142,5 @@ func New(cb func(), wsport int, logs_enabled bool) Reloader {
 	http.HandleFunc("/", r.wshome)
 	go http.ListenAndServe(*addr, nil)
 
-	return r
+	return r, err
 }
