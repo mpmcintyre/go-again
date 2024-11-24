@@ -125,8 +125,10 @@ func New(cb func(), wsport int, logs_enabled bool) (*Reloader, error) {
 				r.log("event:", event)
 				r.log("modified file:", event.Name)
 				cb()
-				for _, conn := range r.ws_connections {
-					conn.WriteMessage(websocket.TextMessage, []byte(event.Name))
+				if len(r.ws_connections) > 0 {
+					for _, conn := range r.ws_connections {
+						conn.WriteMessage(websocket.TextMessage, []byte(event.Name))
+					}
 				}
 
 			case err, ok := <-watcher.Errors:
