@@ -67,8 +67,10 @@ func (r *Reloader) Close() {
 	r.watcher.Close()
 
 	// Close ws connections
-	for _, conn := range r.ws_connections {
-		conn.Close()
+	if len(r.ws_connections) > 0 {
+		for _, conn := range r.ws_connections {
+			conn.Close()
+		}
 	}
 }
 
