@@ -1,0 +1,15 @@
+{{block "index" .}}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {{block "header" .}} {{end}}
+    <title>Go again</title>
+    {{block "navbar" .}}
+  </head>
+  <body>
+    <h1>Hello there</h1>
+    <div>Count: {{.count}}</div>
+    {{template "footer" .}} {{end}}
+  </body>
+</html>
+{{end}}
