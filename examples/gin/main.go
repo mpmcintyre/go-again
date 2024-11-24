@@ -11,19 +11,6 @@ import (
 func main() {
 	app := gin.Default()
 
-	count := 0
-
-	// Add templates, this is the same function used to reload the assets
-	app.LoadHTMLGlob("templates/**/*")
-
-	app.GET("/", func(g *gin.Context) {
-		count += 1
-		g.HTML(http.StatusOK, "index.html", gin.H{
-			"title": "Go Again",
-			"count": count,
-		})
-	})
-
 	// Add hot reloading, listen on port 9000, enable logging
 	rel, err := reloader.New(func() { app.LoadHTMLGlob("templates/**/*") }, 9000, true)
 	if err != nil {
@@ -41,6 +28,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	count := 0
+
+	// Add templates, this is the same function used to reload the assets
+	app.LoadHTMLGlob("templates/**/*")
+
+	app.GET("/", func(g *gin.Context) {
+		count += 1
+		g.HTML(http.StatusOK, "index.html", gin.H{
+			"title": "Go Again",
+			"count": count,
+		})
+	})
 
 	app.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 

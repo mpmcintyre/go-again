@@ -111,7 +111,7 @@ func New(cb func(), wsport int, logs_enabled bool) (*Reloader, error) {
 		return nil, err
 	}
 
-	template, err := template.New("go-again").Parse(create_template(wsport))
+	template, err := template.New("go_again.reload").Parse(create_template(wsport))
 
 	if err != nil {
 		return nil, err

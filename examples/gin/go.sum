@@ -1,5 +1,7 @@
 github.com/MPMcIntyre/go-again v0.0.9 h1:9ZkUoMLXSYhNMbsM7yOdz9f8QOaxM4rsOS59A7sQ+lo=
 github.com/MPMcIntyre/go-again v0.0.9/go.mod h1:3seSs547xQC0Bad4y/BGg8XzxxEW7izJ/mqoIIrefFI=
+github.com/MPMcIntyre/go-again v0.0.10 h1:/VvClz5eEEGp3iLjps7BRSJ9QiQYxc0VyoqVKHDD3pQ=
+github.com/MPMcIntyre/go-again v0.0.10/go.mod h1:3seSs547xQC0Bad4y/BGg8XzxxEW7izJ/mqoIIrefFI=
 github.com/bytedance/sonic v1.11.6 h1:oUp34TzMlL+OY1OUWxHqsdkgC/Zfc85zGqw9siXjrc0=
 github.com/bytedance/sonic v1.11.6/go.mod h1:LysEHSvpvDySVdC2f87zGWf6CIKJcAvqab1ZaiQtds4=
 github.com/bytedance/sonic/loader v0.1.1 h1:c+e5Pt1k/cy5wMveRDyk2X4B9hF4g7an8N3zCYjJFNM=
