@@ -44,13 +44,14 @@ func (r *Reloader) Add(path string) {
 }
 
 // The template required to allow live reloading for HTML templates
-var Template string = `
+func Template(port int) string {
+	return fmt.Sprintf(`
 	<script>
 	(){
 		if (ws) {
 			return false;
 		}
-	  	ws = new WebSocket("{{.}}");
+	  	ws = new WebSocket("localhost:%d");
         ws.onopen = function(evt) {
             print("OPEN");
         }
@@ -67,7 +68,8 @@ var Template string = `
 		ws.send("connect");
 	}()
 	</script>
-	`
+	`, port)
+}
 
 // Defer this in order to ensure all resources are closed
 func (r *Reloader) Close(path string) {
