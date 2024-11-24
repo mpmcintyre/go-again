@@ -5,130 +5,150 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
 )
 
-// Private variables
-var upgrader = websocket.Upgrader{} // use default options
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Allow all origins for development
+	},
+}
 
 type Reloader struct {
-	watcher        *fsnotify.Watcher
-	logs_enabled   bool
-	ws_connections []*websocket.Conn
-	reloadScript   string
+	watcher       *fsnotify.Watcher
+	logsEnabled   bool
+	wsConnections []*websocket.Conn
+	wsPort        int
+	reloadScript  template.HTML
 }
 
-// Private functions
-func createReloadScript(port int) string {
-	return fmt.Sprintf(`
-    <script>
-    (function() {
-        let ws = new WebSocket("ws://localhost:%d");
-        ws.onopen = () => console.log("WebSocket connection opened.");
-        ws.onmessage = (evt) => {
-            console.log("Reload triggered:", evt.data);
-            location.reload();
-        };
-        ws.onclose = () => console.log("WebSocket connection closed.");
-        ws.onerror = (evt) => console.error("WebSocket error:", evt);
-    })();
-    </script>
-    `, port)
+// ReloaderOption allows for functional options pattern
+type ReloaderOption func(*Reloader)
+
+// WithLogs enables or disables logging
+func WithLogs(enabled bool) ReloaderOption {
+	return func(r *Reloader) {
+		r.logsEnabled = enabled
+	}
 }
 
-// Private functions
-// Logs the desired statement depending if logging is enabled or not
 func (r *Reloader) log(v ...any) {
-	if r.logs_enabled {
+	if r.logsEnabled {
 		log.Println(v...)
 	}
 }
-
-// Handler for connecting to websockets
-func (rel *Reloader) wshome(w http.ResponseWriter, r *http.Request) {
-
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-
-	rel.ws_connections = append(rel.ws_connections, c)
-
-	defer c.Close()
-	for {
-		mt, message, err := c.ReadMessage()
-		if err != nil {
-			log.Println("read:", err)
-			break
-		}
-		log.Printf("recv: %s", message)
-		err = c.WriteMessage(mt, message)
-		if err != nil {
-			log.Println("write:", err)
-			break
-		}
-	}
-}
-
-// Public functions
 
 // Add path to folder or file to be watched
 func (r *Reloader) Add(path string) error {
 	return r.watcher.Add(path)
 }
 
-// Defer this in order to ensure all resources are closed
+// Close ensures all resources are properly cleaned up
 func (r *Reloader) Close() {
-	// Close watcher
-	r.watcher.Close()
+	if r.watcher != nil {
+		r.watcher.Close()
+	}
+	for _, conn := range r.wsConnections {
+		conn.Close()
+	}
+}
 
-	// Close ws connections
-	if len(r.ws_connections) > 0 {
-		for _, conn := range r.ws_connections {
-			conn.Close()
+// createReloadScript generates the WebSocket client code
+func createReloadScript(port int) template.HTML {
+	script := fmt.Sprintf(`
+		<script>
+		(function() {
+			let ws = null;
+			function connect() {
+				if (ws) {
+					return;
+				}
+				ws = new WebSocket("ws://localhost:%d/ws");
+				ws.onopen = function() {
+					console.log("[Go-Again] Connected to reload server");
+				};
+				ws.onclose = function() {
+					console.log("[Go-Again] Disconnected from reload server");
+					ws = null;
+					setTimeout(connect, 1000);
+				};
+				ws.onmessage = function(evt) {
+					console.log("[Go-Again] Reloading page due to: " + evt.data);
+					window.location.reload();
+				};
+			}
+			connect();
+		})();
+		</script>
+	`, port)
+	return template.HTML(script)
+}
+
+// wsHandler handles WebSocket connections
+func (r *Reloader) wsHandler(w http.ResponseWriter, req *http.Request) {
+	conn, err := upgrader.Upgrade(w, req, nil)
+	if err != nil {
+		r.log("WebSocket upgrade error:", err)
+		return
+	}
+
+	r.wsConnections = append(r.wsConnections, conn)
+	r.log("New WebSocket connection established")
+
+	// Keep the connection alive and remove it when closed
+	go func() {
+		for {
+			_, _, err := conn.ReadMessage()
+			if err != nil {
+				r.log("WebSocket read error:", err)
+				r.removeConnection(conn)
+				return
+			}
+		}
+	}()
+}
+
+func (r *Reloader) removeConnection(conn *websocket.Conn) {
+	for i, c := range r.wsConnections {
+		if c == conn {
+			r.wsConnections = append(r.wsConnections[:i], r.wsConnections[i+1:]...)
+			break
 		}
 	}
 }
 
-// Public interfaces
-// Inject the reload script for users
-func (r *Reloader) GetReloadScript() template.HTML {
-	return template.HTML(r.reloadScript)
-}
-
-func (r *Reloader) AddReloadToTemplates(t *template.Template) *template.Template {
-	return t.Funcs(template.FuncMap{
-		"go_again_reload": func() template.HTML {
-			return r.GetReloadScript()
+// TemplateFunc returns a template function that injects the reload script
+func (r *Reloader) TemplateFunc() template.FuncMap {
+	return template.FuncMap{
+		"LiveReload": func() template.HTML {
+			return r.reloadScript
 		},
-	})
+	}
 }
 
-func New(cb func(), wsport int, logs_enabled bool) (*Reloader, error) {
-
+// New creates a new Reloader instance
+func New(callback func(), wsPort int, opts ...ReloaderOption) (*Reloader, error) {
 	watcher, err := fsnotify.NewWatcher()
-
 	if err != nil {
-		return nil, err
-	}
-
-	reloadScript := createReloadScript(wsport)
-
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create watcher: %w", err)
 	}
 
 	r := &Reloader{
-		watcher:        watcher,
-		logs_enabled:   logs_enabled,
-		ws_connections: make([]*websocket.Conn, 0),
-		reloadScript:   reloadScript,
+		watcher:       watcher,
+		wsPort:        wsPort,
+		wsConnections: make([]*websocket.Conn, 0),
+		reloadScript:  createReloadScript(wsPort),
 	}
 
-	// Start listening for events.
+	// Apply options
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	// Start file watcher
 	go func() {
 		for {
 			select {
@@ -136,42 +156,37 @@ func New(cb func(), wsport int, logs_enabled bool) (*Reloader, error) {
 				if !ok {
 					return
 				}
-				r.log("event:", event)
-				r.log("modified file:", event.Name)
-				cb()
-				if len(r.ws_connections) > 0 {
-					for _, conn := range r.ws_connections {
-						conn.WriteMessage(websocket.TextMessage, []byte(event.Name))
-					}
+				if strings.HasSuffix(event.Name, ".html") || strings.HasSuffix(event.Name, ".tmpl") {
+					r.log("Template modified:", event.Name)
+					callback()
+					r.notifyClients(event.Name)
 				}
-
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				r.log("error:", err)
+				r.log("Watcher error:", err)
 			}
 		}
 	}()
 
-	// // Set up websocket to reload webpage
-	// var addr = flag.String("addr", fmt.Sprintf("%s%d", "localhost:", wsport), "http service address")
-
-	// http.HandleFunc("/", r.wshome)
-	// go http.ListenAndServe(*addr, nil)
-
-	// // Add template
-
-	// return r, err
-
-	// Set up WebSocket handler
-	addr := fmt.Sprintf(":%d", wsport)
-	http.HandleFunc("/", r.wshome)
+	// Start WebSocket server
+	http.HandleFunc("/ws", r.wsHandler)
 	go func() {
+		addr := fmt.Sprintf(":%d", wsPort)
 		if err := http.ListenAndServe(addr, nil); err != nil {
-			log.Fatalf("WebSocket server failed: %v", err)
+			r.log("WebSocket server error:", err)
 		}
 	}()
 
 	return r, nil
+}
+
+func (r *Reloader) notifyClients(filename string) {
+	for _, conn := range r.wsConnections {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(filename)); err != nil {
+			r.log("Error notifying client:", err)
+			r.removeConnection(conn)
+		}
+	}
 }

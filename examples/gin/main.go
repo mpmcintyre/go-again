@@ -1,6 +1,7 @@
 package main
 
 import (
+	"html/template"
 	"log"
 	"net/http"
 
@@ -9,31 +10,36 @@ import (
 )
 
 func main() {
-	app := gin.Default()
+	debug := true
 
-	// Add hot reloading, listen on port 9000, enable logging
-	rel, err := reloader.New(func() { app.LoadHTMLGlob("templates/**/*") }, 9000, true)
+	app := gin.New()
+
+	if debug {
+		app.Use(gin.Logger())
+	}
+	app.Use(gin.Recovery())
+
+	// Create reloader with logging enabled, ws reload port on 9000
+	rel, err := reloader.New(
+		func() { app.LoadHTMLGlob("templates/**/*") },
+		9000,
+		reloader.WithLogs(debug),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rel.Close()
 
-	// Listen for changes on the components
-	err = rel.Add("templates/components")
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Listen for changes on the views
-	err = rel.Add("templates/views")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Watch template directories, this will trigger a reload on change
+	rel.Add("templates/components")
+	rel.Add("templates/views")
+
+	// Register the LiveReload template function
+	app.SetFuncMap(template.FuncMap{
+		"LiveReload": rel.TemplateFunc()["LiveReload"],
+	})
 
 	count := 0
-
-	// Add templates, this is the same function used to reload the assets
-	app.LoadHTMLGlob("templates/**/*")
-
 	app.GET("/", func(g *gin.Context) {
 		count += 1
 		g.HTML(http.StatusOK, "index.html", gin.H{
@@ -41,7 +47,7 @@ func main() {
 			"count": count,
 		})
 	})
-
+	app.LoadHTMLGlob("templates/**/*")
 	app.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 
 }
