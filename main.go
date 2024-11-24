@@ -44,8 +44,7 @@ func (r *Reloader) Add(path string) {
 }
 
 // The template required to allow live reloading for HTML templates
-func (r *Reloader) Template() string {
-	return `
+var Template string = `
 	<script>
 	(){
 		if (ws) {
@@ -69,7 +68,6 @@ func (r *Reloader) Template() string {
 	}()
 	</script>
 	`
-}
 
 // Defer this in order to ensure all resources are closed
 func (r *Reloader) Close(path string) {
