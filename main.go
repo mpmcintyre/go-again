@@ -3,6 +3,7 @@ package reloader
 import (
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 
@@ -16,6 +17,7 @@ type Reloader struct {
 	watcher        *fsnotify.Watcher
 	logs_enabled   bool
 	ws_connections []*websocket.Conn
+	template       *template.Template
 }
 
 // Private functions
@@ -34,7 +36,7 @@ func (r *Reloader) Add(path string) error {
 }
 
 // The template required to allow live reloading for HTML templates
-func Template(port int) string {
+func create_template(port int) string {
 	return fmt.Sprintf(`
 	<script>
 	(){
@@ -105,13 +107,21 @@ func New(cb func(), wsport int, logs_enabled bool) (*Reloader, error) {
 
 	watcher, err := fsnotify.NewWatcher()
 
+	if err != nil {
+		return nil, err
+	}
+
+	template, err := template.New("go-again").Parse(create_template(wsport))
+
+	if err != nil {
+		return nil, err
+	}
+
 	r := &Reloader{
 		watcher:        watcher,
 		logs_enabled:   logs_enabled,
 		ws_connections: make([]*websocket.Conn, 0),
-	}
-	if err != nil {
-		return r, err
+		template:       template,
 	}
 
 	// Start listening for events.
@@ -145,6 +155,8 @@ func New(cb func(), wsport int, logs_enabled bool) (*Reloader, error) {
 
 	http.HandleFunc("/", r.wshome)
 	go http.ListenAndServe(*addr, nil)
+
+	// Add template
 
 	return r, err
 }
