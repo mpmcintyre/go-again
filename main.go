@@ -11,48 +11,16 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Private fucntions
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true // Allow all origins for development
 	},
 }
 
-type Reloader struct {
-	watcher       *fsnotify.Watcher
-	logsEnabled   bool
-	wsConnections []*websocket.Conn
-	wsPort        int
-	reloadScript  template.HTML
-}
-
-// ReloaderOption allows for functional options pattern
-type ReloaderOption func(*Reloader)
-
-// WithLogs enables or disables logging
-func WithLogs(enabled bool) ReloaderOption {
-	return func(r *Reloader) {
-		r.logsEnabled = enabled
-	}
-}
-
 func (r *Reloader) log(v ...any) {
 	if r.logsEnabled {
 		log.Println(v...)
-	}
-}
-
-// Add path to folder or file to be watched
-func (r *Reloader) Add(path string) error {
-	return r.watcher.Add(path)
-}
-
-// Close ensures all resources are properly cleaned up
-func (r *Reloader) Close() {
-	if r.watcher != nil {
-		r.watcher.Close()
-	}
-	for _, conn := range r.wsConnections {
-		conn.Close()
 	}
 }
 
@@ -85,6 +53,41 @@ func createReloadScript(port int) template.HTML {
 		</script>
 	`, port)
 	return template.HTML(script)
+}
+
+// Public functions
+
+type Reloader struct {
+	watcher       *fsnotify.Watcher
+	logsEnabled   bool
+	wsConnections []*websocket.Conn
+	wsPort        int
+	reloadScript  template.HTML
+}
+
+// ReloaderOption allows for functional options pattern
+type ReloaderOption func(*Reloader)
+
+// WithLogs enables or disables logging
+func WithLogs(enabled bool) ReloaderOption {
+	return func(r *Reloader) {
+		r.logsEnabled = enabled
+	}
+}
+
+// Add path to folder or file to be watched
+func (r *Reloader) Add(path string) error {
+	return r.watcher.Add(path)
+}
+
+// Close ensures all resources are properly cleaned up
+func (r *Reloader) Close() {
+	if r.watcher != nil {
+		r.watcher.Close()
+	}
+	for _, conn := range r.wsConnections {
+		conn.Close()
+	}
 }
 
 // wsHandler handles WebSocket connections
