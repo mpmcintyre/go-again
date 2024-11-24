@@ -26,21 +26,11 @@ func (r *Reloader) log(v ...any) {
 	}
 }
 
-func (r *Reloader) fatal(v ...any) {
-	if r.logs_enabled {
-		log.Fatal(v...)
-	}
-}
-
 // Public functions
 
 // Add path to folder or file to be watched
-func (r *Reloader) Add(path string) {
-
-	err := r.watcher.Add(path)
-	if err != nil {
-		r.fatal(err)
-	}
+func (r *Reloader) Add(path string) error {
+	return r.watcher.Add(path)
 }
 
 // The template required to allow live reloading for HTML templates
