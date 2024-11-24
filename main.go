@@ -62,7 +62,7 @@ func Template(port int) string {
 }
 
 // Defer this in order to ensure all resources are closed
-func (r *Reloader) Close(path string) {
+func (r *Reloader) Close() {
 	// Close watcher
 	r.watcher.Close()
 
@@ -99,11 +99,11 @@ func (rel *Reloader) wshome(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func New(cb func(), wsport int, logs_enabled bool) (Reloader, error) {
+func New(cb func(), wsport int, logs_enabled bool) (*Reloader, error) {
 
 	watcher, err := fsnotify.NewWatcher()
 
-	r := Reloader{
+	r := &Reloader{
 		watcher:        watcher,
 		logs_enabled:   logs_enabled,
 		ws_connections: make([]*websocket.Conn, 1),
