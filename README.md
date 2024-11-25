@@ -18,7 +18,6 @@ Quick Reference:
 - 📁 Multiple directory watching
 - 🛠️ Framework agnostic (with growing compatibility list)
 - 🪶 Lightweight with minimal dependencies
--
 
 ## Contents
 
