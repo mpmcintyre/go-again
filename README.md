@@ -86,7 +86,7 @@ Finally, include the LiveReload tag in your base template:
 
 ## Complete Example
 
-Checkout the full examles in the [example](./examples/README.md) directory
+Checkout the full examles in the [example](./examples/) directory
 
 ```go
 package main
