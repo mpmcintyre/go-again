@@ -103,7 +103,7 @@ import (
     "net/http"
 
     "github.com/gin-gonic/gin"
-    reloader "github.com/MPMcIntyre/go-again"
+    reloader "github.com/mpmcintyre/go-again"
 )
 
 func main() {
