@@ -38,13 +38,13 @@ Perfect for rapid development of:
 To install the module, run the following command:
 
 ```bash
-go get github.com/MPMcIntyre/go-again
+go get github.com/mpmcintyre/go-again
 ```
 
 Then import the package in your main routing component:
 
 ```go
-import reloader "github.com/MPMcIntyre/go-again"
+import reloader "github.com/mpmcintyre/go-again"
 ```
 
 Next, initialize the reloader:
