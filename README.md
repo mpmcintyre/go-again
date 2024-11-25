@@ -1,23 +1,23 @@
 # Go-Again 🔄
 
-Go-Again is a lightweight live-reload solution for Go web applications. It automatically refreshes your browser when template files change, making development faster and more efficient. Unlike server hot-reloading tools (like Air) that require restarting the entire Go server, Go-Again only refreshes the browser while keeping your server running, allowing for rapid template development without server restarts.
+Go-Again is a lightweight live-update solution for Go web applications. It automatically updates your browser content when template files change, making development faster and more efficient. Unlike server hot-reloading tools (like Air) that require restarting the entire Go server, Go-Again only updates the affected content while keeping your server running and preserving client-side state.
 
-**Note: Go-Again is a live-reload (full page refresh) tool, not a hot-module-replacement solution. This means it's perfect for template development but will reset client-side application state on changes. The server-side state is preserved as no server restart is required.**
+Perfect for rapid development of:
 
-Quick Reference:
-
-- Live-Reload (Go-Again): Refreshes the browser page when templates change, server keeps running
-- Hot-Module-Replacement: Updates specific components without page refresh
-- Server Hot-Reload (Air): Rebuilds and restarts entire Go server when code changes
+- Template modifications
+- CSS styling changes
+- Content updates
+- Layout adjustments
 
 ## Features
 
-- 🔥 Hot reloading of HTML templates
+- 🔥 Hot reloading of HTML templates, css stylesheets, and static files
 - 🎯 Minimal setup required
-- 🌐 WebSocket-based browser refresh
+- 🌐 WebSocket-based DOM element replacement
 - 📁 Multiple directory watching
 - 🛠️ Framework agnostic (with growing compatibility list)
 - 🪶 Lightweight with minimal dependencies
+- 💾 State Preservation: Maintains client-side state (form inputs, counters, etc.) during updates
 
 ## Contents
 
@@ -84,6 +84,12 @@ Finally, include the LiveReload tag in your base template:
 {{ LiveReload }}
 ```
 
+You can also tell the HMR script to ignore client-side state values to preserve the view of a value using the `data-client-state` tag:
+
+```html
+<span data-client-state data-bind="clientCount">0</span>
+```
+
 ## Complete Example
 
 Checkout the full examles in the [example](./examples/) directory
@@ -117,6 +123,7 @@ func main() {
     // Watch template directories
     rel.Add("templates/components")
     rel.Add("templates/views")
+    rel.Add("static")
 
     // Register LiveReload function
     app.SetFuncMap(template.FuncMap{
@@ -127,14 +134,62 @@ func main() {
     app.LoadHTMLGlob("templates/**/*")
 
     // Routes
-    app.GET("/", func(c *gin.Context) {
-        c.HTML(http.StatusOK, "index.html", gin.H{
-            "title": "Go Again Demo",
+    count := 0
+    app.GET("/", func(g *gin.Context) {
+        count += 1
+        g.HTML(http.StatusOK, "index.html", gin.H{
+            "title": "Go Again",
+            "count": count,
         })
     })
 
     app.Run(":8080")
 }
+```
+
+With your template as:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {{LiveReload}}
+    <title>{{ .title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8" />
+    <script>
+      var clientCount = 0;
+      // Function to update all elements that display the counter
+      function updateCounterDisplays() {
+        document
+          .querySelectorAll('[data-bind="clientCount"]')
+          .forEach((element) => {
+            element.textContent = clientCount;
+          });
+      }
+
+      // Function to increment counter
+      function incrementCounter() {
+        console.log("Increment");
+        clientCount++;
+        updateCounterDisplays();
+      }
+
+      // Initialize displays when page loads
+      document.addEventListener("DOMContentLoaded", updateCounterDisplays);
+    </script>
+  </head>
+  <body>
+    <div>
+      <div>Server side count: {{.count}}</div>
+      <div>
+        Client counter value:
+        <span data-client-state data-bind="clientCount">0</span>
+      </div>
+      <button onclick="incrementCounter()">Increment Counter</button>
+    </div>
+  </body>
+</html>
 ```
 
 ## Framework Compatibility

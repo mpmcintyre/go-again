@@ -1,15 +1,42 @@
-{{block "index" .}}
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    {{block "header" .}} {{end}}
+    {{template "header.html" .}}
     <title>Go again</title>
-    {{block "navbar" .}}
+    {{template "navbar.html" .}}
+    <script>
+      var clientCount = 0;
+      // Function to update all elements that display the counter
+      function updateCounterDisplays() {
+        document
+          .querySelectorAll('[data-bind="clientCount"]')
+          .forEach((element) => {
+            element.textContent = clientCount;
+          });
+      }
+
+      // Function to increment counter
+      function incrementCounter() {
+        console.log("Increment");
+        clientCount++;
+        updateCounterDisplays();
+      }
+
+      // Initialize displays when page loads
+      document.addEventListener("DOMContentLoaded", updateCounterDisplays);
+    </script>
   </head>
   <body>
-    <h1>Change me and save</h1>
-    <div>Count: {{.count}}</div>
-    {{template "footer" .}} {{end}}
+    <div class="container">
+      <h1 style="color: white">Change me and save</h1>
+      <img src="static/doggo2.jpeg" />
+      <div>Server side count: {{.count}}</div>
+      <div>
+        Client counter value:
+        <span data-client-state data-bind="clientCount">0</span>
+      </div>
+      <button onclick="incrementCounter()">Increment Counter</button>
+    </div>
+    {{template "footer.html" .}}
   </body>
 </html>
-{{end}}

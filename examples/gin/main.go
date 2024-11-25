@@ -11,7 +11,7 @@ import (
 
 func main() {
 	debug := true
-
+	gin.SetMode(gin.DebugMode)
 	app := gin.New()
 
 	if debug {
@@ -31,13 +31,20 @@ func main() {
 	defer rel.Close()
 
 	// Watch template directories, this will trigger a reload on change
-	rel.Add("templates/components")
-	rel.Add("templates/views")
+	rel.Add("./templates/components")
+	rel.Add("./templates/views")
+	err = rel.Add("./static")
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register the LiveReload template function
 	app.SetFuncMap(template.FuncMap{
 		"LiveReload": rel.TemplateFunc()["LiveReload"],
 	})
+
+	app.Static("/static", "./static")
 
 	count := 0
 	app.GET("/", func(g *gin.Context) {
